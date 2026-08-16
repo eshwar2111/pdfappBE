@@ -1,5 +1,10 @@
 # Deployment
 
+Repositories:
+
+- Backend — <https://github.com/eshwar2111/pdfappBE>
+- Frontend — <https://github.com/eshwar2111/pdfappFE>
+
 Target architecture:
 
 ```
@@ -113,7 +118,7 @@ to learn its URL, or set this afterwards and restart.
 
 ### Connect the deployment
 
-**Deployment Center → GitHub → select the backend repo → main branch.**
+**Deployment Center → GitHub → `eshwar2111/pdfappBE` → `main`.**
 
 Azure commits a workflow file of its own. Delete it and keep
 `.github/workflows/deploy.yml` from this repo — it installs dependencies in CI
@@ -138,7 +143,7 @@ Portal → **Create a resource → Static Web App**
 |---|---|
 | Name | `pdf-intelligence` |
 | Plan type | **Free** |
-| Source | GitHub → the frontend repo → `main` |
+| Source | GitHub → `eshwar2111/pdfappFE` → `main` |
 | Build presets | **Custom** |
 | App location | `/` |
 | Api location | *(leave empty)* |
