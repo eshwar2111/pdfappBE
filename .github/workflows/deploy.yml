@@ -1,0 +1,57 @@
+name: Deploy backend to Azure App Service
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  PYTHON_VERSION: '3.11'
+  # Must match the App Service name created in Azure.
+  AZURE_WEBAPP_NAME: pdf-intelligence-api
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      # Dependencies are installed into the deployment payload rather than
+      # relying on App Service's Oryx build. It makes the deployed artifact
+      # exactly what CI tested, and removes a slow, opaque build step from the
+      # critical path of every deploy.
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt --target=".python_packages/lib/site-packages"
+
+      - name: Compile-check sources
+        run: python -m compileall -q app
+
+      - name: Deploy
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ env.AZURE_WEBAPP_NAME }}
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+
+      # The app is only genuinely deployed once it can reach the database.
+      # /health/ready runs a real query, so this catches a broken connection
+      # string before anyone opens the site.
+      - name: Verify readiness
+        run: |
+          for attempt in {1..12}; do
+            if curl -fsS "https://${{ env.AZURE_WEBAPP_NAME }}.azurewebsites.net/health/ready"; then
+              echo "  <- ready"
+              exit 0
+            fi
+            echo "not ready yet (attempt $attempt), waiting…"
+            sleep 10
+          done
+          echo "Readiness check failed after 2 minutes."
+          exit 1

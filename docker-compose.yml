@@ -1,0 +1,27 @@
+# Local Postgres with the pgvector extension pre-installed.
+# A stock Postgres install does not ship pgvector, so this image is the
+# path of least resistance for local development.
+#
+#   docker compose up -d
+#   alembic upgrade head
+#
+services:
+  postgres:
+    image: pgvector/pgvector:pg17
+    container_name: pdfapp-postgres
+    environment:
+      POSTGRES_USER: pdfapp
+      POSTGRES_PASSWORD: pdfapp
+      POSTGRES_DB: pdfapp
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pdfapp -d pdfapp"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  pgdata:

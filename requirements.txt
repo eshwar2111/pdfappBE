@@ -1,0 +1,40 @@
+# --- Web framework -----------------------------------------------------------
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+# Process manager for production. Uvicorn alone is single-process; gunicorn
+# supervises several uvicorn workers and restarts one that dies.
+gunicorn==23.0.0
+python-multipart==0.0.20
+
+# --- Settings & validation ---------------------------------------------------
+pydantic==2.13.4
+pydantic-settings==2.7.0
+email-validator==2.2.0
+
+# --- Database ----------------------------------------------------------------
+sqlalchemy[asyncio]==2.0.36
+asyncpg==0.30.0
+alembic==1.14.0
+pgvector==0.3.6
+
+# --- Security ----------------------------------------------------------------
+argon2-cffi==23.1.0
+pyjwt==2.10.1
+
+# --- Storage -----------------------------------------------------------------
+azure-storage-blob==12.24.0
+
+# --- PDF ---------------------------------------------------------------------
+pypdf==5.1.0
+pdfplumber==0.11.4
+
+# --- AI ----------------------------------------------------------------------
+# Pin deliberately: older SDK releases target retired API surfaces and fail with
+# 404s on current model names.
+google-genai==2.18.1
+
+# --- Utilities ---------------------------------------------------------------
+httpx==0.28.1
+tenacity==9.0.0
+python-json-logger==3.2.1
+slowapi==0.1.9
