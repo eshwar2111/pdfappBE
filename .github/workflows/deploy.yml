@@ -7,8 +7,12 @@ on:
 
 env:
   PYTHON_VERSION: '3.11'
-  # Must match the App Service name created in Azure.
+  # The App Service resource name, used for the deploy step.
   AZURE_WEBAPP_NAME: pdf-intelligence-api
+  # The public hostname, used for the post-deploy readiness check. Azure now
+  # appends a unique suffix and a regional segment, so this is NOT simply
+  # "<name>.azurewebsites.net" — copy it from the portal's Essentials panel.
+  AZURE_WEBAPP_HOSTNAME: pdf-intelligence-api-bccedkabcaczf4er.centralindia-01.azurewebsites.net
 
 jobs:
   build-and-deploy:
@@ -46,7 +50,7 @@ jobs:
       - name: Verify readiness
         run: |
           for attempt in {1..12}; do
-            if curl -fsS "https://${{ env.AZURE_WEBAPP_NAME }}.azurewebsites.net/health/ready"; then
+            if curl -fsS "https://${{ env.AZURE_WEBAPP_HOSTNAME }}/health/ready"; then
               echo "  <- ready"
               exit 0
             fi
