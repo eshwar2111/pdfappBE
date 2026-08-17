@@ -100,15 +100,34 @@ letting the app serve against a schema it does not understand.
 | `EMAIL_BACKEND` | `resend` |
 | `RESEND_API_KEY` | your key |
 | `EMAIL_FROM` | `PDF Intelligence <onboarding@resend.dev>` |
-| `SCM_DO_BUILD_DURING_DEPLOYMENT` | **`true`** — Oryx must build; see note below |
+| `SCM_DO_BUILD_DURING_DEPLOYMENT` | **`true`** |
+| `ENABLE_ORYX_BUILD` | **`true`** — required *in addition*; see below |
+| `WEBSITES_CONTAINER_START_TIME_LIMIT` | `1800` |
 | `WEBSITES_PORT` | `8000` |
 
-> **`SCM_DO_BUILD_DURING_DEPLOYMENT` must be `true`.** App Service Linux builds
-> Python apps with Oryx, which creates and activates an `antenv` virtualenv from
-> `requirements.txt` on the server. Vendoring packages into
-> `.python_packages/lib/site-packages` is the Azure *Functions* convention —
-> App Service does not read that path, so the app deploys successfully and then
-> returns 503 because nothing is importable.
+> **Dependency installation is the single most fragile part of this deploy.**
+>
+> App Service Linux expects Oryx to build an `antenv` virtualenv from
+> `requirements.txt` on the server. Two settings are required together —
+> `SCM_DO_BUILD_DURING_DEPLOYMENT=true` *and* `ENABLE_ORYX_BUILD=true`. With
+> only the first, a OneDeploy push silently skips the build and the container
+> starts with nothing importable, which surfaces as an opaque 503 while the
+> deploy itself reports success. The container log gives it away:
+>
+> ```
+> Could not find build manifest file at '/home/site/wwwroot/oryx-manifest.toml'
+> WARNING: Could not find virtual environment directory .../antenv
+> /opt/python/3.11.15/bin/python: No module named alembic
+> ```
+>
+> `startup.sh` therefore does not trust Oryx: if the virtualenv is missing it
+> builds one itself before running migrations. `/home` is persistent, so that
+> cost is paid once rather than on every restart —
+> `WEBSITES_CONTAINER_START_TIME_LIMIT=1800` gives that first boot room to
+> finish instead of being killed at the default 230 seconds.
+>
+> Vendoring into `.python_packages/lib/site-packages` does *not* work here —
+> that is the Azure *Functions* layout and App Service never reads it.
 
 Generate the production secret with:
 
