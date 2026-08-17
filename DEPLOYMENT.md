@@ -100,8 +100,15 @@ letting the app serve against a schema it does not understand.
 | `EMAIL_BACKEND` | `resend` |
 | `RESEND_API_KEY` | your key |
 | `EMAIL_FROM` | `PDF Intelligence <onboarding@resend.dev>` |
-| `SCM_DO_BUILD_DURING_DEPLOYMENT` | `false` |
+| `SCM_DO_BUILD_DURING_DEPLOYMENT` | **`true`** — Oryx must build; see note below |
 | `WEBSITES_PORT` | `8000` |
+
+> **`SCM_DO_BUILD_DURING_DEPLOYMENT` must be `true`.** App Service Linux builds
+> Python apps with Oryx, which creates and activates an `antenv` virtualenv from
+> `requirements.txt` on the server. Vendoring packages into
+> `.python_packages/lib/site-packages` is the Azure *Functions* convention —
+> App Service does not read that path, so the app deploys successfully and then
+> returns 503 because nothing is importable.
 
 Generate the production secret with:
 
