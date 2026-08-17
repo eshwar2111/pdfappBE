@@ -23,6 +23,11 @@ pyjwt==2.10.1
 
 # --- Storage -----------------------------------------------------------------
 azure-storage-blob==12.24.0
+# Required by azure.storage.blob.aio: the async client needs an async HTTP
+# transport, and azure-storage-blob does not declare aiohttp as a dependency.
+# Missing it fails only at runtime, only on the azure storage backend — so it
+# never appears locally where STORAGE_BACKEND=local.
+aiohttp==3.11.11
 
 # --- PDF ---------------------------------------------------------------------
 pypdf==5.1.0
