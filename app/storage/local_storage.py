@@ -1,25 +1,19 @@
 """Filesystem-backed storage for local development.
 
-Keeps the whole app runnable without an Azure account. Instead of a SAS URL it
-mints a signed, expiring token that the backend's own file endpoint validates —
-so the *shape* of the flow (authorize, then hand out a short-lived credential)
-matches production rather than being special-cased.
+Keeps the whole app runnable without an Azure account, and — because both
+backends hand out the same application-signed links — the download flow is
+identical in development and production rather than being special-cased.
 """
 
 from __future__ import annotations
 
 import asyncio
-from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from urllib.parse import quote
-
-import jwt
 
 from app.core.config import settings
 from app.core.exceptions import StorageError
 from app.storage.base import BlobStorage, SignedURL
-
-_TOKEN_TYPE = "blob"
+from app.storage.signed_links import build_download_url, mint_download_token
 
 
 class LocalBlobStorage(BlobStorage):
@@ -59,32 +53,5 @@ class LocalBlobStorage(BlobStorage):
         await asyncio.to_thread(_unlink)
 
     async def signed_url(self, *, key: str, filename: str) -> SignedURL:
-        expires_at = datetime.now(UTC) + timedelta(minutes=settings.sas_url_ttl_minutes)
-        token = jwt.encode(
-            {
-                "typ": _TOKEN_TYPE,
-                "key": key,
-                "sub": key,
-                "exp": int(expires_at.timestamp()),
-            },
-            settings.jwt_secret,
-            algorithm=settings.jwt_algorithm,
-        )
-        url = (
-            f"{settings.api_v1_prefix}/files/{quote(token)}"
-            f"?filename={quote(filename)}"
-        )
-        return SignedURL(url=url, expires_at=expires_at)
-
-    @staticmethod
-    def verify_download_token(token: str) -> str:
-        """Return the blob key a local download token authorises."""
-        try:
-            claims = jwt.decode(
-                token, settings.jwt_secret, algorithms=[settings.jwt_algorithm]
-            )
-        except jwt.InvalidTokenError as exc:
-            raise StorageError("This file link is invalid or has expired.") from exc
-        if claims.get("typ") != _TOKEN_TYPE:
-            raise StorageError("This file link is invalid.")
-        return str(claims["key"])
+        token, expires_at = mint_download_token(key)
+        return SignedURL(url=build_download_url(token, filename), expires_at=expires_at)

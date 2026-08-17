@@ -21,6 +21,7 @@ from azure.storage.blob.aio import BlobServiceClient
 from app.core.config import settings
 from app.core.exceptions import StorageError
 from app.storage.base import BlobStorage, SignedURL
+from app.storage.signed_links import build_download_url, mint_download_token
 
 logger = logging.getLogger(__name__)
 
@@ -83,6 +84,27 @@ class AzureBlobStorage(BlobStorage):
             raise StorageError() from exc
 
     async def signed_url(self, *, key: str, filename: str) -> SignedURL:
+        """Return an application-signed link served by this API.
+
+        Deliberately not a storage SAS URL. A SAS points the browser at
+        `*.blob.core.windows.net`, a different origin, which then needs its own
+        CORS rule — and when that rule is missing or subtly wrong the symptom is
+        a broken PDF viewer rather than anything that names CORS. Serving the
+        bytes through the API keeps everything on one origin and keeps storage
+        account names and blob keys out of the client entirely.
+
+        `generate_sas_url` below still implements the SAS approach, for a
+        deployment that would rather not proxy the bytes.
+        """
+        token, expires_at = mint_download_token(key)
+        return SignedURL(url=build_download_url(token, filename), expires_at=expires_at)
+
+    async def generate_sas_url(self, *, key: str, filename: str) -> SignedURL:
+        """Direct-to-storage read URL, valid for minutes.
+
+        Unused by default — see `signed_url`. Requires a CORS rule on the
+        storage account allowing the frontend origin with GET and HEAD.
+        """
         expires_at = datetime.now(UTC) + timedelta(minutes=settings.sas_url_ttl_minutes)
         try:
             async with self._service() as service:
