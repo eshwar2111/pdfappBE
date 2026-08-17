@@ -3,7 +3,14 @@
 FastAPI service for PDF upload, AI summarisation, retrieval-grounded chat,
 link sharing and collaborative commenting.
 
-Frontend repository: **`pdf-intelligence-frontend`** (React + TypeScript + Vite).
+| | |
+|---|---|
+| **Live app** | <https://nice-ocean-0f59a2900.7.azurestaticapps.net> |
+| **API** | <https://pdf-intelligence-api-bccedkabcaczf4er.centralindia-01.azurewebsites.net> |
+| **API docs** | disabled in production; available at `/docs` when running locally |
+| **Frontend repo** | <https://github.com/eshwar2111/pdfappFE> |
+
+Deployment steps are in [`DEPLOYMENT.md`](DEPLOYMENT.md).
 
 ---
 
@@ -422,9 +429,19 @@ cannot be forgotten at a call site. Vector search carries `WHERE document_id =
 …` inside the SQL, so retrieval physically cannot return a chunk the caller is
 not authorized to see.
 
-**Files** — blobs are private. Each read mints a fresh, read-only SAS valid for
-minutes, and only after authorization has passed. The local backend mirrors the
-same shape with a signed, expiring token.
+**Files** — the blob container is private and is never reached by the browser.
+Each read mints an application-signed token scoped to a single blob and valid
+for minutes, and only after authorization has passed; the API then streams the
+bytes from storage. The storage account name, container layout and blob keys
+therefore never reach the client, and a copied PDF link cannot be replayed
+against storage directly. Token types are distinct, so an access or guest token
+cannot be used as a download token.
+
+This replaced direct-to-storage SAS URLs, which put the PDF on a different
+origin and so required a CORS rule on the storage account — configuration that,
+when missing, fails as a broken viewer rather than as anything naming CORS. The
+SAS implementation remains in `storage/azure_blob.py` as `generate_sas_url` for
+a deployment that would rather not proxy the bytes.
 
 **Share tokens** — 256 bits of entropy; only the SHA-256 digest is stored, so a
 leaked database does not yield working links. Revocation is immediate: guest
